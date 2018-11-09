@@ -1,0 +1,10 @@
+C:\OneDrive\Personal\Projects\AImotive\probafeladat\client\client03\client03\bin\Debug\client03.exe.config
+C:\OneDrive\Personal\Projects\AImotive\probafeladat\client\client03\client03\bin\Debug\client03.exe
+C:\OneDrive\Personal\Projects\AImotive\probafeladat\client\client03\client03\bin\Debug\client03.pdb
+C:\OneDrive\Personal\Projects\AImotive\probafeladat\client\client03\client03\obj\Debug\client03.csprojAssemblyReference.cache
+C:\OneDrive\Personal\Projects\AImotive\probafeladat\client\client03\client03\obj\Debug\client03.Form1.resources
+C:\OneDrive\Personal\Projects\AImotive\probafeladat\client\client03\client03\obj\Debug\client03.Properties.Resources.resources
+C:\OneDrive\Personal\Projects\AImotive\probafeladat\client\client03\client03\obj\Debug\client03.csproj.GenerateResource.cache
+C:\OneDrive\Personal\Projects\AImotive\probafeladat\client\client03\client03\obj\Debug\client03.csproj.CoreCompileInputs.cache
+C:\OneDrive\Personal\Projects\AImotive\probafeladat\client\client03\client03\obj\Debug\client03.exe
+C:\OneDrive\Personal\Projects\AImotive\probafeladat\client\client03\client03\obj\Debug\client03.pdb
