@@ -1,118 +1,166 @@
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <WinSock2.h>
+#include <conio.h>
+#include <time.h>
 
 
-#define SRVPORT		9876
-#define RXBUFSIZE	128   /* Receive buffer size */
-#define MAXPENDING	1     /* Maximum outstanding connection requests */
+#define SRV_PORT 3939
 
-
-void DieWithError(char *errorMessage);
-int CreateTCPServerSocket(unsigned short port);
-void HandleTCPClient(int clntSocket);   /* TCP client handling function */
-
-
-void main(int argc, char *argv[])
+DWORD WINAPI sendThrd(LPVOID lpParam)
 {
-	WSADATA wsaData;					/* Structure for WinSock setup communication */
-	SOCKET listenSocket;				/* Listening socket */
-	int retval;
-	int clntLen;
-	struct sockaddr_in echoClntAddr;	/* Client address */
-	int recvMsgSize;					/* Size of received message */
+	SOCKET sock = *(SOCKET*)lpParam;
+	char smesg[155], *pdata;
+	int len, ret;
+	clock_t start, diff;
+	int msec, dmsec;
+	int sec = 0;
 
 
+	start = clock();
+	diff = clock() - start;
+	msec = diff * 1000 / CLOCKS_PER_SEC;
+	dmsec = msec;
 
-	/* Request Winsock version 2.2 */
-
-	if ((retval = WSAStartup(0x202, &wsaData)) != 0)
+	do
 	{
-		fprintf(stderr, "Server: WSAStartup() failed with error %d\n", retval);
-		WSACleanup();
-		exit(1);
-	}
-	else
-		printf("Server: WSAStartup() is OK.\n");
+		diff = clock() - start;
+		msec = diff * 1000 / CLOCKS_PER_SEC;
+		if (msec - dmsec >= 1000)
+		{
+			sec++;
+			printf("Seconds: %d\r\n", sec);
+			dmsec = msec;
+		}
 
-	listenSocket = CreateTCPServerSocket(SRVPORT);
+		/*if (!fgets(smesg, sizeof(smesg), stdin))
+			break;*/
 
+		len = 0; strlen(smesg);
+		pdata = smesg;
 
-	for (;;) /* Run forever */
-	{
-		/* Set the size of the in-out parameter */
-		clntLen = sizeof(echoClntAddr);
+		while (len > 0)
+		{
+			ret = send(sock, pdata, len, 0);
+			if (ret == SOCKET_ERROR)
+			{
+				printf("Send failed. Error: %d", WSAGetLastError());
+				break;
+			}
+			pdata += ret;
+			len -= ret;
+		}
+	} while (1);
 
-		/* Wait for a client to connect */
-		if ((listenSocket = accept(listenSocket, (struct sockaddr *) &echoClntAddr, &clntLen)) < 0)
-			DieWithError("accept() failed");
-
-		/* clntSock is connected to a client! */
-
-		printf("Handling client %s\n", inet_ntoa(echoClntAddr.sin_addr));
-
-		HandleTCPClient(listenSocket);
-	}
+	shutdown(sock, SD_SEND);
+	return 0;
 }
 
-
-void DieWithError(char *errorMessage)
+DWORD WINAPI recvThrd(LPVOID lpParam)
 {
-	fprintf(stderr, "%s: %d\n", errorMessage, WSAGetLastError());
-	exit(1);
-}
+	SOCKET sock = *(SOCKET*)lpParam;
+	char smesg[256];
+	int ret;
 
-int CreateTCPServerSocket(unsigned short port)
-{
-	int sock;                        /* socket to create */
-	struct sockaddr_in echoServAddr; /* Local address */
+	FILE *fp = fopen("fout.txt", "w+");
 
-	/* Create socket for incoming connections */
-	if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
-		DieWithError("socket() failed");
-
-	/* Construct local address structure */
-	memset(&echoServAddr, 0, sizeof(echoServAddr));   /* Zero out structure */
-	echoServAddr.sin_family = AF_INET;                /* Internet address family */
-	echoServAddr.sin_addr.s_addr = htonl(INADDR_ANY); /* Any incoming interface */
-	echoServAddr.sin_port = htons(port);			  /* Local port */
-
-	/* Bind to the local address */
-	if (bind(sock, (struct sockaddr *) &echoServAddr, sizeof(echoServAddr)) < 0)
-		DieWithError("bind() failed");
-
-	/* Mark the socket so it will listen for incoming connections */
-	if (listen(sock, MAXPENDING) < 0)
-		DieWithError("listen() failed");
-
-	return sock;
-}
-
-void HandleTCPClient(int clntSocket)
-{
-	char rxBuffer[RXBUFSIZE];			/* Buffer for echo string */
-	int recvMsgSize;                    /* Size of received message */
-
-	/* Receive message from client */
-	if ((recvMsgSize = recv(clntSocket, rxBuffer, RXBUFSIZE, 0)) < 0)
-		DieWithError("recv() failed");
-
-	/* Send received string and receive again until end of transmission */
-	while (recvMsgSize > 0)      /* zero indicates end of transmission */
+	do
 	{
-		printf("%.*s\r\n", recvMsgSize, rxBuffer);
+		ret = recv(sock, smesg, sizeof(smesg), 0);
+		if (ret <= 0)
+		{
+			if (ret == 0)
+				printf("Client disconnected\n");
+			else
+				printf("Connection lost! Error: %d\n", WSAGetLastError());
+			break;
+		}
 
-		/* Echo message back to client */
-		if (send(clntSocket, rxBuffer, recvMsgSize, 0) != recvMsgSize)
-			DieWithError("send() failed");
+		printf("%.*s", ret, smesg);
 
-		/* See if there is more data to receive */
-		if ((recvMsgSize = recv(clntSocket, rxBuffer, RXBUFSIZE, 0)) < 0)
-			DieWithError("recv() failed");
+		if (fp)
+			fprintf(fp, "%.*s", ret, smesg);
+	} while (1);
+
+	if (fp)
+		fclose(fp);
+
+	shutdown(sock, SD_RECEIVE);
+	return 0;
+}
+
+int main()
+{
+	WSADATA wsa;
+	SOCKET sock, newsock;
+	int c;
+	struct sockaddr_in server, client;
+
+	printf("Initializing Winsock...\n");
+	int ret = WSAStartup(MAKEWORD(2, 2), &wsa);
+	if (ret != 0)
+	{
+		printf("Initialization Failed. Error: %d", ret);
+		return 1;
+	}
+	printf("Initialized.\n");
+
+	sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (sock == INVALID_SOCKET) {
+		printf("Could not create socket! Error: %d\n", WSAGetLastError());
+		return 1;
 	}
 
-	closesocket(clntSocket);    /* Close client socket */
+	printf("Socket Created!\n");
+
+	memset(&server, 0, sizeof(server));
+	server.sin_family = AF_INET;
+	server.sin_addr.s_addr = INADDR_ANY;
+	server.sin_port = htons(SRV_PORT);
+
+	//bind
+	if (bind(sock, (struct sockaddr *)&server, sizeof(server)) == SOCKET_ERROR) {
+		printf("Bind failed! Error: %d\n", WSAGetLastError());
+		closesocket(sock);
+		return 1;
+	}
+	printf("Binded!\n");
+
+	// listen
+	if (listen(sock, 1) == SOCKET_ERROR) {
+		printf("Listen failed! Error: %d\n", WSAGetLastError());
+		closesocket(sock);
+		return 1;
+	}
+	printf("Now Listening...\n");
+
+	//Accept!
+	c = sizeof(client);
+	newsock = accept(sock, (struct sockaddr *)&client, &c);
+	if (newsock == INVALID_SOCKET) {
+		printf("Couldn't Accept connection! Error: %d\n", WSAGetLastError());
+		closesocket(sock);
+		return 1;
+	}
+
+	//char *client_ip = inet_ntoa(client.sin_addr);
+	//int client_port = ntohs(client.sin_port);
+	printf("Accepted Connection!\n");
+
+	printf("Starting Reader/Writer Threads...\n");
+	HANDLE threads[2];
+	threads[0] = CreateThread(NULL, 0, sendThrd, &newsock, 0, NULL);
+	threads[1] = CreateThread(NULL, 0, recvThrd, &newsock, 0, NULL);
+
+	WaitForMultipleObjects(2, threads, TRUE, INFINITE);
+
+	CloseHandle(threads[0]);
+	CloseHandle(threads[1]);
+
+	closesocket(newsock);
+	closesocket(sock);
+
+	return 0;
 }

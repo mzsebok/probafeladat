@@ -1,3 +1,2 @@
 ﻿  main.c
-c:\onedrive\personal\projects\aimotive\probafeladat\server\server\main.c(26): warning C4101: 'recvMsgSize': unreferenced local variable
   server.vcxproj -> C:\OneDrive\Personal\Projects\AImotive\probafeladat\server\Debug\server.exe
