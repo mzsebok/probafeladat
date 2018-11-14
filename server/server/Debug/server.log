@@ -1,10 +1,2 @@
 ﻿  main.c
-c:\downloads\temp\aimotive\probafeladat\server\server\main.c(54): warning C4133: '=': incompatible types - from 'rxData *' to 'char *'
-c:\downloads\temp\aimotive\probafeladat\server\server\main.c(70): warning C4477: 'sscanf' : format string '%d' requires an argument of type 'int *', but variadic argument 1 has type 'char *'
-  c:\downloads\temp\aimotive\probafeladat\server\server\main.c(70): note: consider using '%hhd' in the format string
-c:\downloads\temp\aimotive\probafeladat\server\server\main.c(70): warning C4477: 'sscanf' : format string '%d' requires an argument of type 'int *', but variadic argument 3 has type 'char *'
-  c:\downloads\temp\aimotive\probafeladat\server\server\main.c(70): note: consider using '%hhd' in the format string
-c:\downloads\temp\aimotive\probafeladat\server\server\main.c(66): warning C4101: 'newRecvData': unreferenced local variable
-c:\downloads\temp\aimotive\probafeladat\server\server\main.c(152): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
-c:\downloads\temp\aimotive\probafeladat\server\server\main.c(120): warning C4101: 'sChk': unreferenced local variable
   server.vcxproj -> C:\Downloads\TEMP\AImotive\probafeladat\server\Debug\server.exe

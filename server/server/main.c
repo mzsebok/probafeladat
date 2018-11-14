@@ -23,7 +23,7 @@ typedef struct {
 	float speed;
 	int   setWheelDegree;
 	int   actWheelDegree;
-	float acceleration;
+	int   acceleration;
 }vehicleState;
 
 vehicleState myVehicleState = { 0, 'N', 0, 0, 0, 0 , 0};		// actual vehicle state
@@ -45,17 +45,18 @@ rxData newRxData = {0, 0, 'N', 0, 0, 0, 0, 0 };
 char connectedState = 0;
 
 
-int calclChecksum(rxData *recvData)
+int calclChecksum(char *sData)
 {
 	int i;
 	int chkSum = 0;
-	char *data;
 
-	data = recvData;
-	i = sizeof(rxData) - sizeof(int);
+	i = strlen(sData) - 1;
+
+	while (*(sData+i) != ',' && i > 0)i--;		// find last parameter before checksum
+
 	while ((i--) != 0)
 	{
-		chkSum += *(data++);
+		chkSum += *(sData+i);
 	}
 
 	return (chkSum);
@@ -63,11 +64,10 @@ int calclChecksum(rxData *recvData)
 
 int parseReceivedData(rxData *recvData, char *smsg)
 {
-	rxData newRecvData;
 	recvData->newData = 0;
 	
 
-	sscanf(smsg, "%d,%c,%d,%d,%d,%d,%d\n",
+	sscanf(smsg, "%c,%c,%c,%d,%d,%d,%d\n",
 		&recvData->ignition,
 		&recvData->gear,
 		&recvData->turnSignal,
@@ -76,7 +76,7 @@ int parseReceivedData(rxData *recvData, char *smsg)
 		&recvData->acceleration,
 		&recvData->checkSum);
 
-	if (calclChecksum(recvData) == recvData->checkSum)
+	if (calclChecksum(smsg) == recvData->checkSum)
 		return (1);
 	else
 		return (0);
@@ -93,7 +93,7 @@ void vehicleStateMachine(void)
 		myVehicleState.ignition = newRxData.ignition;
 		myVehicleState.gear = newRxData.gear;
 		myVehicleState.turnSignal = newRxData.turnSignal;
-		myVehicleState.acceleration = (float)newRxData.acceleration;
+		myVehicleState.acceleration = newRxData.acceleration;
 		myVehicleState.setWheelDegree = newRxData.wheelDegree;
 		newRxData.newData = 0;
 	}
@@ -117,7 +117,7 @@ void vehicleStateMachine(void)
 DWORD WINAPI sendThrd(LPVOID lpParam)
 {
 	SOCKET sock = *(SOCKET*)lpParam;
-	char smesg[155], sChk[100], *pdata;
+	char smesg[155], *pdata;
 	int len, ret;
 	clock_t start, diff;
 	int msec, dmsec;
@@ -150,7 +150,7 @@ DWORD WINAPI sendThrd(LPVOID lpParam)
 			sendData.speed = (int)myVehicleState.speed;
 			sendData.wheelDegree = myVehicleState.actWheelDegree;
 			sendData.acceleration = myVehicleState.acceleration;
-			sendData.checkSum = calclChecksum(&sendData);
+			sendData.checkSum = 0;
 
 			sprintf(smesg, "%d,%d,%c,%d,%d,%d,%d,%d\r\n",
 				sendData.newData,
@@ -162,7 +162,17 @@ DWORD WINAPI sendThrd(LPVOID lpParam)
 				sendData.acceleration,
 				sendData.checkSum);
 
-			/*sprintf(sChk, "%d", calclChecksum(smesg));*/
+			sendData.checkSum = calclChecksum(smesg);
+
+			sprintf(smesg, "%d,%d,%c,%d,%d,%d,%d,%d\r\n",
+				sendData.newData,
+				sendData.ignition,
+				sendData.gear,
+				sendData.turnSignal,
+				sendData.speed,
+				sendData.wheelDegree,
+				sendData.acceleration,
+				sendData.checkSum);
 
 			len = strlen(smesg);
 			pdata = smesg;

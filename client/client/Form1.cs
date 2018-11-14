@@ -10,11 +10,14 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Net.Sockets;
 using System.Net;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.IO;
 
 namespace client03
 {
     public partial class Client : Form
     {
+        [Serializable()]
         public class VehicleData
         {
             public int newData { get; set; }
@@ -39,6 +42,11 @@ namespace client03
                 acceleration = 0;
                 checkSum = 0;
             }
+
+            /*public static VehicleData operator= (VehicleData vH1, VehicleData vH2)
+            {
+
+            }*/
         }
 
         public class ObjectState
@@ -318,7 +326,60 @@ namespace client03
 
         private void textBoxReceivedData_TextChanged(object sender, EventArgs e)
         {
+            VehicleData myvhData = new VehicleData();
+            int value;
+           
+
             recvString = textBoxReceivedData.Text;
+            string[] subStrings = recvString.Split(',');
+
+            Int32.TryParse(subStrings[0], out value);
+            myvhData.newData = value;
+
+            Int32.TryParse(subStrings[1], out value);
+            myvhData.ignition = value;
+
+            myvhData.gear = subStrings[2][0];
+
+            Int32.TryParse(subStrings[3], out value);
+            myvhData.turnSignal = value;
+
+            Int32.TryParse(subStrings[4], out value);
+            myvhData.speed = value;
+
+            Int32.TryParse(subStrings[5], out value);
+            myvhData.wheelDegree = value;
+
+            Int32.TryParse(subStrings[6], out value);
+            myvhData.acceleration = value;
+
+            Int32.TryParse(subStrings[7], out value);
+            myvhData.checkSum = value;
+
+            if (calculateChecksum(recvString) == myvhData.checkSum)
+                setVehicleData = myvhData;
+
+
         }
+
+
+        private int calculateChecksum(string sData)
+        {
+            int i;
+            int chkSum = 0;
+
+            i = sData.Length - 1;
+
+            while (sData[i] != ',' && i > 0) i--;       // find last parameter before checksum
+
+            while ((i--) != 0)
+            {
+                chkSum += sData[i];
+            }
+
+            return chkSum;
+        }
+
+
     }
 }
