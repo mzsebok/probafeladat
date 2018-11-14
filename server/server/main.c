@@ -17,9 +17,9 @@ HANDLE hSemRXData;
 HANDLE hSemDisc;
 
 typedef struct {
-	char  ignition;
+	int   ignition;
 	char  gear;
-	char  turnSignal;
+	int   turnSignal;
 	float speed;
 	int   setWheelDegree;
 	int   actWheelDegree;
@@ -29,10 +29,10 @@ typedef struct {
 vehicleState myVehicleState = { 0, 'N', 0, 0, 0, 0 , 0};		// actual vehicle state
 
 typedef struct {
-	char newData;
-	char ignition;
+	int  newData;
+	int  ignition;
 	char gear;
-	char turnSignal;
+	int  turnSignal;
 	int  speed;
 	int  wheelDegree;
 	int  acceleration;
@@ -67,7 +67,7 @@ int parseReceivedData(rxData *recvData, char *smsg)
 	recvData->newData = 0;
 	
 
-	sscanf(smsg, "%c,%c,%c,%d,%d,%d,%d\n",
+	sscanf(smsg, "%d,%c,%d,%d,%d,%d,%d\n",
 		&recvData->ignition,
 		&recvData->gear,
 		&recvData->turnSignal,
@@ -100,8 +100,12 @@ void vehicleStateMachine(void)
 
 	ReleaseSemaphore(hSemRXData, 1, 0);
 
+	if(myVehicleState.gear == 'N')
+		myVehicleState.speed += ((-20.0) * 5.0) / 100.0;
+	else
+		myVehicleState.speed += ((float)myVehicleState.acceleration * 5.0) / 100.0;
 
-	myVehicleState.speed += ((float)myVehicleState.acceleration * 5) / 100;
+
 	if (myVehicleState.gear == 'D' && myVehicleState.speed > MAXSPEED_D)myVehicleState.speed = MAXSPEED_D;
 	if (myVehicleState.gear == 'R' && myVehicleState.speed > MAXSPEED_R)myVehicleState.speed = MAXSPEED_R;
 	if (myVehicleState.speed < 0)myVehicleState.speed = 0;

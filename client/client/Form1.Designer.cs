@@ -45,8 +45,8 @@
             this.labelAcc = new System.Windows.Forms.Label();
             this.labelDeAcc = new System.Windows.Forms.Label();
             this.labelSpeed = new System.Windows.Forms.Label();
-            this.checkBox1 = new System.Windows.Forms.CheckBox();
-            this.checkBox2 = new System.Windows.Forms.CheckBox();
+            this.checkBoxTurnLeft = new System.Windows.Forms.CheckBox();
+            this.checkBoxTurnRight = new System.Windows.Forms.CheckBox();
             this.labelTurnInd = new System.Windows.Forms.Label();
             this.labelTurnIndLeft = new System.Windows.Forms.Label();
             this.labelTurnIndRight = new System.Windows.Forms.Label();
@@ -99,7 +99,6 @@
             this.trackBarActualSteerPosition.Name = "trackBarActualSteerPosition";
             this.trackBarActualSteerPosition.Size = new System.Drawing.Size(400, 45);
             this.trackBarActualSteerPosition.TabIndex = 3;
-            this.trackBarActualSteerPosition.ValueChanged += new System.EventHandler(this.trackBarActualSteerPosition_ValueChanged);
             // 
             // trackBarAcc
             // 
@@ -144,6 +143,7 @@
             this.radioButtonD.TabIndex = 2;
             this.radioButtonD.Text = "D";
             this.radioButtonD.UseVisualStyleBackColor = true;
+            this.radioButtonD.CheckedChanged += new System.EventHandler(this.radioButtonR_CheckedChanged);
             // 
             // radioButtonN
             // 
@@ -156,6 +156,7 @@
             this.radioButtonN.TabStop = true;
             this.radioButtonN.Text = "N";
             this.radioButtonN.UseVisualStyleBackColor = true;
+            this.radioButtonN.CheckedChanged += new System.EventHandler(this.radioButtonR_CheckedChanged);
             // 
             // radioButtonR
             // 
@@ -166,6 +167,7 @@
             this.radioButtonR.TabIndex = 0;
             this.radioButtonR.Text = "R";
             this.radioButtonR.UseVisualStyleBackColor = true;
+            this.radioButtonR.CheckedChanged += new System.EventHandler(this.radioButtonR_CheckedChanged);
             // 
             // checkBoxIgnition
             // 
@@ -176,6 +178,7 @@
             this.checkBoxIgnition.TabIndex = 6;
             this.checkBoxIgnition.Text = "Ignition";
             this.checkBoxIgnition.UseVisualStyleBackColor = true;
+            this.checkBoxIgnition.CheckedChanged += new System.EventHandler(this.checkBoxIgnition_CheckedChanged);
             // 
             // labelIgnition
             // 
@@ -233,23 +236,25 @@
             this.labelSpeed.TabIndex = 12;
             this.labelSpeed.Text = "0";
             // 
-            // checkBox1
+            // checkBoxTurnLeft
             // 
-            this.checkBox1.AutoSize = true;
-            this.checkBox1.Location = new System.Drawing.Point(93, 262);
-            this.checkBox1.Name = "checkBox1";
-            this.checkBox1.Size = new System.Drawing.Size(15, 14);
-            this.checkBox1.TabIndex = 13;
-            this.checkBox1.UseVisualStyleBackColor = true;
+            this.checkBoxTurnLeft.AutoSize = true;
+            this.checkBoxTurnLeft.Location = new System.Drawing.Point(93, 262);
+            this.checkBoxTurnLeft.Name = "checkBoxTurnLeft";
+            this.checkBoxTurnLeft.Size = new System.Drawing.Size(15, 14);
+            this.checkBoxTurnLeft.TabIndex = 13;
+            this.checkBoxTurnLeft.UseVisualStyleBackColor = true;
+            this.checkBoxTurnLeft.CheckedChanged += new System.EventHandler(this.checkBoxTurnLeft_CheckedChanged);
             // 
-            // checkBox2
+            // checkBoxTurnRight
             // 
-            this.checkBox2.AutoSize = true;
-            this.checkBox2.Location = new System.Drawing.Point(114, 262);
-            this.checkBox2.Name = "checkBox2";
-            this.checkBox2.Size = new System.Drawing.Size(15, 14);
-            this.checkBox2.TabIndex = 14;
-            this.checkBox2.UseVisualStyleBackColor = true;
+            this.checkBoxTurnRight.AutoSize = true;
+            this.checkBoxTurnRight.Location = new System.Drawing.Point(114, 262);
+            this.checkBoxTurnRight.Name = "checkBoxTurnRight";
+            this.checkBoxTurnRight.Size = new System.Drawing.Size(15, 14);
+            this.checkBoxTurnRight.TabIndex = 14;
+            this.checkBoxTurnRight.UseVisualStyleBackColor = true;
+            this.checkBoxTurnRight.CheckedChanged += new System.EventHandler(this.checkBoxTurnLeft_CheckedChanged);
             // 
             // labelTurnInd
             // 
@@ -327,8 +332,8 @@
             this.Controls.Add(this.labelTurnIndRight);
             this.Controls.Add(this.labelTurnIndLeft);
             this.Controls.Add(this.labelTurnInd);
-            this.Controls.Add(this.checkBox2);
-            this.Controls.Add(this.checkBox1);
+            this.Controls.Add(this.checkBoxTurnRight);
+            this.Controls.Add(this.checkBoxTurnLeft);
             this.Controls.Add(this.labelSpeed);
             this.Controls.Add(this.labelDeAcc);
             this.Controls.Add(this.labelAcc);
@@ -376,8 +381,8 @@
         private System.Windows.Forms.Label labelAcc;
         private System.Windows.Forms.Label labelDeAcc;
         private System.Windows.Forms.Label labelSpeed;
-        private System.Windows.Forms.CheckBox checkBox1;
-        private System.Windows.Forms.CheckBox checkBox2;
+        private System.Windows.Forms.CheckBox checkBoxTurnLeft;
+        private System.Windows.Forms.CheckBox checkBoxTurnRight;
         private System.Windows.Forms.Label labelTurnInd;
         private System.Windows.Forms.Label labelTurnIndLeft;
         private System.Windows.Forms.Label labelTurnIndRight;

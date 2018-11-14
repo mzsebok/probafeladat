@@ -6,18 +6,15 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Net.Sockets;
 using System.Net;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 
 namespace client03
 {
     public partial class Client : Form
     {
-        [Serializable()]
         public class VehicleData
         {
             public int newData { get; set; }
@@ -42,240 +39,84 @@ namespace client03
                 acceleration = 0;
                 checkSum = 0;
             }
-
-            /*public static VehicleData operator= (VehicleData vH1, VehicleData vH2)
-            {
-
-            }*/
         }
 
-        public class ObjectState
-        {
-            public const int BufferSize = 256;
-            public Socket wSocket = null;
-            public byte[] Buffer = new byte[BufferSize];
-            public StringBuilder sb = new StringBuilder();
-        }
 
-        public class MyEventArgs : EventArgs    // guideline: derive from EventArgs
-        {
-            public string Msg { get; set; }
-        }
-
-        public class AsyncSocketClient
-        {
-            private const int Port = 3939;
-            private static ManualResetEvent connectCompleted = new ManualResetEvent(false);
-            private static ManualResetEvent sendCompleted = new ManualResetEvent(false);
-            private static ManualResetEvent receiveCompleted = new ManualResetEvent(false);
-            private static string response = String.Empty;
-
-            
-
-            public event EventHandler<MyEventArgs> Changed;    // the Event
-
-            protected virtual void OnChanged(string msg)      // the Trigger
-            {
-                var args = new MyEventArgs { Msg = msg };    // this part will vary
-                Changed?.Invoke(this, args);
-            }
-
-            public void StartClientReceive()
-            {
-                //try
-                {
-                    IPAddress[] ipv4Addresses = Array.FindAll(Dns.GetHostEntry(string.Empty).AddressList, a => a.AddressFamily == AddressFamily.InterNetwork);
-                    IPAddress ipAddr = ipv4Addresses[0];
-                    IPEndPoint ipEndPoint = new IPEndPoint(ipAddr, 3939);
-
-                    Socket client = new Socket(ipAddr.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                    client.BeginConnect(ipEndPoint, new AsyncCallback(ConnectionCallback), client);
-
-                    for (; ; )
-                    {
-                        /*Send(client, "This is a message <EOF>");
-                        sendCompleted.WaitOne();
-                        sendCompleted.Reset();*/
-
-                        Receive(client);
-                        receiveCompleted.WaitOne();
-                        receiveCompleted.Reset();
-
-                        OnChanged(response);  // raise the event
-                                              // Console.WriteLine($"Response {response}");
-                    }
-
-                    client.Shutdown(SocketShutdown.Both);
-                    client.Close();
-
-                }
-                //catch
-                { }
-            }
-
-            private static void Receive(Socket client)
-            {
-                try
-                {
-                    ObjectState state = new ObjectState();
-                    state.wSocket = client;
-                    client.BeginReceive(state.Buffer, 0, ObjectState.BufferSize, 0, new AsyncCallback(ReceiveCallback), state);
-                }
-                catch
-                { }
-            }
-
-            private static void ReceiveCallback(IAsyncResult ar)
-            {
-                try
-                {
-                    ObjectState state = (ObjectState)ar.AsyncState;
-                    var client = state.wSocket;
-                    int byteRead = client.EndReceive(ar);
-                    if(byteRead >0)
-                    {
-                        state.sb.Append(Encoding.ASCII.GetString(state.Buffer, 0, byteRead));
-                        //client.BeginReceive(state.Buffer, 0, ObjectState.BufferSize, 0, new AsyncCallback(ReceiveCallback), state);
-                    }
-                    //else
-                    {
-                        if(state.sb.Length > 1)
-                        {
-                            response = state.sb.ToString();
-                        }
-
-                        receiveCompleted.Set();
-                    }
-                }
-                catch
-                { }
-            }
-
-            private static void Send(Socket client, string data)
-            {
-                byte[] byteData = Encoding.ASCII.GetBytes(data);
-                client.BeginSend(byteData, 0, byteData.Length, 0, new AsyncCallback(SendCallback), client);
-            }
-
-            private static void SendCallback(IAsyncResult ar)
-            {
-                try
-                {
-                    Socket client = (Socket)ar.AsyncState;
-                    int byteSent = client.EndSend(ar);
-                    // Console.WriteLine($"Sent: {byteSent}");
-                    sendCompleted.Set();
-                }
-                catch
-                { }
-            }
-
-            private static void ConnectionCallback(IAsyncResult ar)
-            {
-                try
-                {
-                    Socket client = (Socket)ar.AsyncState;
-                    client.EndConnect(ar);
-                    connectCompleted.Set();
-                }
-                catch
-                { }
-            }
-        }
-
-        // Receiving byte array  
-        //byte[] bytes = new byte[1024];
+        delegate void SetTextCallback(string text);
         String recvString;
-        //Socket senderSock;
-        Thread _socketThread;
-
-        // VehicleData myVehicleData = new VehicleData();
+        //VehicleData myVehicleData = new VehicleData();
         VehicleData setVehicleData = new VehicleData();
-        
+
+        private const int portNum = 3939;
+        private const string hostName = "localhost";
+        TcpClient client;
+        NetworkStream ns;
+        Thread t = null;
 
 
         public Client()
         {
             InitializeComponent();
+
             buttonConnect.Enabled = true;
             buttonDisconnect.Enabled = false;
         }
 
         private void buttonConnect_Click(object sender, EventArgs e)
         {
-            _socketThread = new Thread(SocketThreadFunc);
-            _socketThread.Start();
-            /*try
-            {
-                // Create one SocketPermission for socket access restrictions 
-                SocketPermission permission = new SocketPermission(
-                    NetworkAccess.Connect,    // Connection permission 
-                    TransportType.Tcp,        // Defines transport types 
-                    "",                       // Gets the IP addresses 
-                    SocketPermission.AllPorts // All ports 
-                    );
+            IPAddress[] ipv4Addresses = Array.FindAll(Dns.GetHostEntry(string.Empty).AddressList, a => a.AddressFamily == AddressFamily.InterNetwork);
+            IPAddress ipAddr = ipv4Addresses[0];
 
-                // Ensures the code to have permission to access a Socket 
-                permission.Demand();
+            client = new TcpClient(ipAddr.ToString(), portNum);
+            ns = client.GetStream();
+            /*String s = "Connected";
+            byte[] byteTime = Encoding.ASCII.GetBytes(s);
+            ns.Write(byteTime, 0, byteTime.Length);*/
+            t = new Thread(DoWork);
+            t.Start();
 
-                // Resolves a host name to an IPHostEntry instance            
-                // Gets first IP address associated with a localhost 
-                IPAddress[] ipv4Addresses = Array.FindAll(Dns.GetHostEntry(string.Empty).AddressList, a => a.AddressFamily == AddressFamily.InterNetwork);
+            buttonConnect.Enabled = false;
+            buttonDisconnect.Enabled = true;
 
-                IPAddress ipAddr = ipv4Addresses[0];
-
-                // Creates a network endpoint 
-                IPEndPoint ipEndPoint = new IPEndPoint(ipAddr, 3939);
-
-                // Create one Socket object to setup Tcp connection 
-                senderSock = new Socket(
-                    ipAddr.AddressFamily,// Specifies the addressing scheme 
-                    SocketType.Stream,   // The type of socket  
-                    ProtocolType.Tcp     // Specifies the protocols  
-                    );
-
-                senderSock.NoDelay = false;   // Using the Nagle algorithm 
-
-                // Establishes a connection to a remote host 
-                senderSock.Connect(ipEndPoint);
-                //tbStatus.Text = "Socket connected to " + senderSock.RemoteEndPoint.ToString();
-
-                buttonConnect.Enabled = false;
-                buttonDisconnect.Enabled = true;
-            }
-            catch (Exception exc) { MessageBox.Show(exc.ToString()); }*/
-        }
-
-        private void SocketThreadFunc()
-        {
-            AsyncSocketClient asyncClient = new AsyncSocketClient();
-            asyncClient.Changed += asyncClient_Changed;
-            asyncClient.StartClientReceive();
-        }
-
-        private void asyncClient_Changed(object sender, MyEventArgs e)
-        {
-            
-            string s = e.Msg;
-            this.Invoke((MethodInvoker)delegate {
-                textBoxReceivedData.Text = s; // runs on UI thread
-            });
+            SendData(setVehicleData);
         }
 
         private void buttonDisconnect_Click(object sender, EventArgs e)
         {
-            /*try
-            {
-                // Disables sends and receives on a Socket. 
-                senderSock.Shutdown(SocketShutdown.Both);
-
-                //Closes the Socket connection and releases all resources 
-                senderSock.Close();
+                t.Abort();
+                client.Close();
 
                 buttonDisconnect.Enabled = false;
                 buttonConnect.Enabled = true;
+
+        }
+
+        // This is run as a thread
+
+        public void DoWork()
+        {
+            byte[] bytes = new byte[1024];
+            while (true)
+            {
+                int bytesRead = ns.Read(bytes, 0, bytes.Length);
+                this.SetText(Encoding.ASCII.GetString(bytes, 0, bytesRead));
             }
-            catch (Exception exc) { MessageBox.Show(exc.ToString()); }*/
+        }
+
+        private void SetText(string text)
+        {
+            // InvokeRequired required compares the thread ID of the
+            // calling thread to the thread ID of the creating thread.
+            // If these threads are different, it returns true.
+            if (this.textBoxReceivedData.InvokeRequired)
+            {
+                SetTextCallback d = new SetTextCallback(SetText);
+                this.Invoke(d, new object[] { text });
+            }
+            else
+            {
+                this.textBoxReceivedData.Text = text;
+            }
         }
 
         private void trackBarSteering_Scroll(object sender, EventArgs e)
@@ -297,11 +138,8 @@ namespace client03
             setVehicleData.wheelDegreeSet = value;
             
             trackBarSteering.Value = setVehicleData.wheelDegreeSet;
-        }
 
-        private void trackBarActualSteerPosition_ValueChanged(object sender, EventArgs e)
-        {
-            labelActSteer.Text = trackBarActualSteerPosition.Value.ToString();
+            SendData(setVehicleData);
         }
 
         private void trackBarAcc_Scroll(object sender, EventArgs e)
@@ -322,6 +160,8 @@ namespace client03
             setVehicleData.acceleration = value;
 
             trackBarAcc.Value = setVehicleData.acceleration;
+
+            SendData(setVehicleData);
         }
 
         private void textBoxReceivedData_TextChanged(object sender, EventArgs e)
@@ -396,6 +236,7 @@ namespace client03
             labelSpeed.Text = updataVh.speed.ToString();
 
             labelActSteer.Text = updataVh.wheelDegree.ToString();
+            trackBarActualSteerPosition.Value = updataVh.wheelDegree;
 
             switch (updataVh.turnSignal)
             {
@@ -418,9 +259,73 @@ namespace client03
 
         }
 
+        private void SendData(VehicleData sendVhData)
+        {
+            if (buttonDisconnect.Enabled)
+            {
+                String s;
+
+                s = sendVhData.ignition.ToString() + ',';
+                s += sendVhData.gear.ToString() + ',';
+                s += sendVhData.turnSignal.ToString() + ',';
+                s += sendVhData.speed.ToString() + ',';
+                s += sendVhData.wheelDegreeSet.ToString() + ',';
+                s += sendVhData.acceleration.ToString() + ',';
+                s += sendVhData.checkSum.ToString() + '\n';
+
+                sendVhData.checkSum = calculateChecksum(s);
+
+                s = sendVhData.ignition.ToString() + ',';
+                s += sendVhData.gear.ToString() + ',';
+                s += sendVhData.turnSignal.ToString() + ',';
+                s += sendVhData.speed.ToString() + ',';
+                s += sendVhData.wheelDegreeSet.ToString() + ',';
+                s += sendVhData.acceleration.ToString() + ',';
+                s += sendVhData.checkSum.ToString() + '\n';
+
+                byte[] byteTime = Encoding.ASCII.GetBytes(s);
+                ns.Write(byteTime, 0, byteTime.Length);
+            }
+        }
+
+        private void checkBoxIgnition_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkBoxIgnition.Checked)
+                setVehicleData.ignition = 1;
+            else
+                setVehicleData.ignition = 0;
+
+            SendData(setVehicleData);
+
+        }
+
+        private void radioButtonR_CheckedChanged(object sender, EventArgs e)
+        {
+            if (radioButtonR.Checked) setVehicleData.gear = 'R';
+            else if (radioButtonN.Checked) setVehicleData.gear = 'N';
+            else if (radioButtonD.Checked) setVehicleData.gear = 'D';
+            else
+                setVehicleData.gear = 'N';
+
+            SendData(setVehicleData);
+        }
+
+        private void checkBoxTurnLeft_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkBoxTurnLeft.Checked) setVehicleData.turnSignal |= 1; 
+            else
+                setVehicleData.turnSignal &= ~1;
+
+            if (checkBoxTurnRight.Checked) setVehicleData.turnSignal |= 2;
+            else
+                setVehicleData.turnSignal &= ~2;
+
+            SendData(setVehicleData);
+        }
+
         private void Client_FormClosing(object sender, FormClosingEventArgs e)
         {
-            _socketThread.Abort();
+            buttonDisconnect_Click(sender, e);
         }
     }
 }
