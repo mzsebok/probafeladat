@@ -346,6 +346,7 @@
             this.MaximizeBox = false;
             this.Name = "Client";
             this.Text = "Client";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Client_FormClosing);
             ((System.ComponentModel.ISupportInitialize)(this.trackBarSteering)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarActualSteerPosition)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarAcc)).EndInit();

@@ -357,10 +357,14 @@ namespace client03
             myvhData.checkSum = value;
 
             if (calculateChecksum(recvString) == myvhData.checkSum)
+            {
                 setVehicleData = myvhData;
+                UpdateGUI(setVehicleData);
+            }
 
 
-        }
+
+            }
 
 
         private int calculateChecksum(string sData)
@@ -380,6 +384,43 @@ namespace client03
             return chkSum;
         }
 
+        private void UpdateGUI(VehicleData updataVh)
+        {
+            if (updataVh.ignition != 0)
+                labelIgnition.Text = "ON";
+            else
+                labelIgnition.Text = "OFF";
 
+            labelSelectedGear.Text = updataVh.gear.ToString();
+
+            labelSpeed.Text = updataVh.speed.ToString();
+
+            labelActSteer.Text = updataVh.wheelDegree.ToString();
+
+            switch (updataVh.turnSignal)
+            {
+                default:
+                case 0:
+                    labelTurnIndLeft.Text = "0";
+                    labelTurnIndRight.Text = "0";
+                    break;
+                case 1:
+                    labelTurnIndLeft.Text = "1";
+                    break;
+                case 2:
+                    labelTurnIndRight.Text = "1";
+                    break;
+                case 3:
+                    labelTurnIndLeft.Text = "1";
+                    labelTurnIndRight.Text = "1";
+                    break;
+            }
+
+        }
+
+        private void Client_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            _socketThread.Abort();
+        }
     }
 }
