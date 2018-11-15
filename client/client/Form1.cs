@@ -66,19 +66,22 @@ namespace client03
         {
             IPAddress[] ipv4Addresses = Array.FindAll(Dns.GetHostEntry(string.Empty).AddressList, a => a.AddressFamily == AddressFamily.InterNetwork);
             IPAddress ipAddr = ipv4Addresses[0];
+            try
+            {
+                client = new TcpClient(ipAddr.ToString(), portNum);
+                ns = client.GetStream();
+                /*String s = "Connected";
+                byte[] byteTime = Encoding.ASCII.GetBytes(s);
+                ns.Write(byteTime, 0, byteTime.Length);*/
+                t = new Thread(DoWork);
+                t.Start();
 
-            client = new TcpClient(ipAddr.ToString(), portNum);
-            ns = client.GetStream();
-            /*String s = "Connected";
-            byte[] byteTime = Encoding.ASCII.GetBytes(s);
-            ns.Write(byteTime, 0, byteTime.Length);*/
-            t = new Thread(DoWork);
-            t.Start();
+                buttonConnect.Enabled = false;
+                buttonDisconnect.Enabled = true;
 
-            buttonConnect.Enabled = false;
-            buttonDisconnect.Enabled = true;
-
-            SendData(setVehicleData);
+                SendData(setVehicleData);
+            }
+            catch { }
         }
 
         private void buttonDisconnect_Click(object sender, EventArgs e)
@@ -96,9 +99,19 @@ namespace client03
         public void DoWork()
         {
             byte[] bytes = new byte[1024];
+            int bytesRead = 0;
+
             while (true)
             {
-                int bytesRead = ns.Read(bytes, 0, bytes.Length);
+                try
+                {
+                    bytesRead = ns.Read(bytes, 0, bytes.Length);
+                }
+                catch
+                {
+                    this.SetText("Disconnected");
+                }
+
                 this.SetText(Encoding.ASCII.GetString(bytes, 0, bytesRead));
             }
         }
@@ -111,7 +124,11 @@ namespace client03
             if (this.textBoxReceivedData.InvokeRequired)
             {
                 SetTextCallback d = new SetTextCallback(SetText);
-                this.Invoke(d, new object[] { text });
+                try
+                {
+                    this.Invoke(d, new object[] { text });
+                }
+                catch { }
             }
             else
             {
@@ -168,43 +185,51 @@ namespace client03
         {
             VehicleData myvhData = new VehicleData();
             int value;
-           
+
+            myvhData = setVehicleData;
+
+            if(textBoxReceivedData.Text == "Disconnected")
+            {
+                buttonDisconnect_Click(sender, e);
+                return;
+            }
 
             recvString = textBoxReceivedData.Text;
-            string[] subStrings = recvString.Split(',');
 
-            Int32.TryParse(subStrings[0], out value);
-            myvhData.newData = value;
-
-            Int32.TryParse(subStrings[1], out value);
-            myvhData.ignition = value;
-
-            myvhData.gear = subStrings[2][0];
-
-            Int32.TryParse(subStrings[3], out value);
-            myvhData.turnSignal = value;
-
-            Int32.TryParse(subStrings[4], out value);
-            myvhData.speed = value;
-
-            Int32.TryParse(subStrings[5], out value);
-            myvhData.wheelDegree = value;
-
-            Int32.TryParse(subStrings[6], out value);
-            myvhData.acceleration = value;
-
-            Int32.TryParse(subStrings[7], out value);
-            myvhData.checkSum = value;
-
-            if (calculateChecksum(recvString) == myvhData.checkSum)
+            if (recvString.Length > 0)
             {
-                setVehicleData = myvhData;
-                UpdateGUI(setVehicleData);
+                string[] subStrings = recvString.Split(',');
+
+                Int32.TryParse(subStrings[0], out value);
+                myvhData.newData = value;
+
+                Int32.TryParse(subStrings[1], out value);
+                myvhData.ignition = value;
+
+                myvhData.gear = subStrings[2][0];
+
+                Int32.TryParse(subStrings[3], out value);
+                myvhData.turnSignal = value;
+
+                Int32.TryParse(subStrings[4], out value);
+                myvhData.speed = value;
+
+                Int32.TryParse(subStrings[5], out value);
+                myvhData.wheelDegree = value;
+
+                Int32.TryParse(subStrings[6], out value);
+                myvhData.acceleration = value;
+
+                Int32.TryParse(subStrings[7], out value);
+                myvhData.checkSum = value;
+
+                if (calculateChecksum(recvString) == myvhData.checkSum)
+                {
+                    setVehicleData = myvhData;
+                    UpdateGUI(setVehicleData);
+                }
             }
-
-
-
-            }
+        }
 
 
         private int calculateChecksum(string sData)
@@ -247,8 +272,10 @@ namespace client03
                     break;
                 case 1:
                     labelTurnIndLeft.Text = "1";
+                    labelTurnIndRight.Text = "0";
                     break;
                 case 2:
+                    labelTurnIndLeft.Text = "0";
                     labelTurnIndRight.Text = "1";
                     break;
                 case 3:

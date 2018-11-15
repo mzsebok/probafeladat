@@ -26,7 +26,7 @@ typedef struct {
 	int   acceleration;
 }vehicleState;
 
-vehicleState myVehicleState = { 0, 'N', 0, 0, 0, 0 , 0};		// actual vehicle state
+vehicleState myVehicleState = { 0, 'N', 0, 0, 0, 0 , 0 };		// actual vehicle state
 
 typedef struct {
 	int  newData;
@@ -82,7 +82,7 @@ int parseReceivedData(rxData *recvData, char *smsg)
 		return (0);
 }
 
-void vehicleStateMachine(void)
+void vehicleStateMachine(vehicleState * vHState)
 {
 	int wheelStep = WHEELSTEPVAL;
 
@@ -90,31 +90,30 @@ void vehicleStateMachine(void)
 
 	if (newRxData.newData)
 	{
-		myVehicleState.ignition = newRxData.ignition;
-		myVehicleState.gear = newRxData.gear;
-		myVehicleState.turnSignal = newRxData.turnSignal;
-		myVehicleState.acceleration = newRxData.acceleration;
-		myVehicleState.setWheelDegree = newRxData.wheelDegree;
+		vHState->ignition = newRxData.ignition;
+		vHState->gear = newRxData.gear;
+		vHState->turnSignal = newRxData.turnSignal;
+		vHState->acceleration = newRxData.acceleration;
+		vHState->setWheelDegree = newRxData.wheelDegree;
 		newRxData.newData = 0;
 	}
 
 	ReleaseSemaphore(hSemRXData, 1, 0);
 
-	if(myVehicleState.gear == 'N')
-		myVehicleState.speed += ((-20.0) * 5.0) / 100.0;
-	else
-		myVehicleState.speed += ((float)myVehicleState.acceleration * 5.0) / 100.0;
+
+	if(vHState->gear != 'N')
+		vHState->speed += ((float)vHState->acceleration * (float)5.0) / (float)100.0;
 
 
-	if (myVehicleState.gear == 'D' && myVehicleState.speed > MAXSPEED_D)myVehicleState.speed = MAXSPEED_D;
-	if (myVehicleState.gear == 'R' && myVehicleState.speed > MAXSPEED_R)myVehicleState.speed = MAXSPEED_R;
-	if (myVehicleState.speed < 0)myVehicleState.speed = 0;
+	if (vHState->gear == 'D' && vHState->speed > MAXSPEED_D)vHState->speed = MAXSPEED_D;
+	if (vHState->gear == 'R' && vHState->speed > MAXSPEED_R)vHState->speed = MAXSPEED_R;
+	if (vHState->speed < 0)vHState->speed = 0;
 
 
-	if ((wheelStep = abs(myVehicleState.actWheelDegree - myVehicleState.setWheelDegree)) > WHEELSTEPVAL)wheelStep = WHEELSTEPVAL;
+	if ((wheelStep = abs(vHState->actWheelDegree - vHState->setWheelDegree)) > WHEELSTEPVAL)wheelStep = WHEELSTEPVAL;
 
-	if (myVehicleState.actWheelDegree > myVehicleState.setWheelDegree)myVehicleState.actWheelDegree -= wheelStep;
-	else if(myVehicleState.actWheelDegree < myVehicleState.setWheelDegree)myVehicleState.actWheelDegree += wheelStep;
+	if (vHState->actWheelDegree > vHState->setWheelDegree)vHState->actWheelDegree -= wheelStep;
+	else if(vHState->actWheelDegree < vHState->setWheelDegree)vHState->actWheelDegree += wheelStep;
 }
 
 
@@ -125,9 +124,10 @@ DWORD WINAPI sendThrd(LPVOID lpParam)
 	int len, ret;
 	clock_t start, diff;
 	int msec, dmsec;
-	int sec = 0;
+	int msecCount = 0;
 	rxData sendData;
 	char connected = 0;
+	
 
 
 	start = clock();
@@ -145,7 +145,7 @@ DWORD WINAPI sendThrd(LPVOID lpParam)
 		msec = diff * 1000 / CLOCKS_PER_SEC;
 		if (msec - dmsec >= 100)	// 100 msec execution
 		{
-			vehicleStateMachine();
+			vehicleStateMachine(&myVehicleState);
 
 			sendData.newData = 1;			// success indicator
 			sendData.ignition = myVehicleState.ignition;
@@ -156,7 +156,7 @@ DWORD WINAPI sendThrd(LPVOID lpParam)
 			sendData.acceleration = myVehicleState.acceleration;
 			sendData.checkSum = 0;
 
-			sprintf(smesg, "%d,%d,%c,%d,%d,%d,%d,%d\r\n",
+			sprintf(smesg, "%d,%d,%c,%d,%d,%d,%d,%d\n",
 				sendData.newData,
 				sendData.ignition,
 				sendData.gear,
@@ -168,7 +168,7 @@ DWORD WINAPI sendThrd(LPVOID lpParam)
 
 			sendData.checkSum = calclChecksum(smesg);
 
-			sprintf(smesg, "%d,%d,%c,%d,%d,%d,%d,%d\r\n",
+			sprintf(smesg, "%d,%d,%c,%d,%d,%d,%d,%d\n",
 				sendData.newData,
 				sendData.ignition,
 				sendData.gear,
@@ -181,8 +181,19 @@ DWORD WINAPI sendThrd(LPVOID lpParam)
 			len = strlen(smesg);
 			pdata = smesg;
 				
-			sec++;
-			printf("100msecs: %d Speed: %d Wheel: %d\r\n", sec, (int)myVehicleState.speed, myVehicleState.actWheelDegree);
+			msecCount++;
+
+			printf("100msecs: %d \t Ign: %d Gear: %c Acc: %d \t Speed: %d \t Wheel: %d \t Wheel Setp: %d \t Turn: %d \n",
+				msecCount,
+				myVehicleState.ignition,
+				myVehicleState.gear,
+				myVehicleState.acceleration,
+				(int)myVehicleState.speed,
+				myVehicleState.actWheelDegree,
+				myVehicleState.setWheelDegree,
+				myVehicleState.turnSignal);
+
+
 			dmsec = msec;
 		}
 
@@ -192,7 +203,7 @@ DWORD WINAPI sendThrd(LPVOID lpParam)
 			ret = send(sock, pdata, len, 0);
 			if (ret == SOCKET_ERROR)
 			{
-				printf("Send failed. Error: %d", WSAGetLastError());
+				printf("Send failed. Error: %d \n", WSAGetLastError());
 				break;
 			}
 			pdata += ret;
@@ -215,8 +226,12 @@ DWORD WINAPI recvThrd(LPVOID lpParam)
 {
 	SOCKET sock = *(SOCKET*)lpParam;
 	char smesg[256];
+	char timeStr[256];
 	int ret;
 	rxData recvData;
+	time_t rawtime;
+	struct tm * timeinfo;
+
 
 	FILE *fp = fopen("fout.txt", "w+");
 
@@ -240,10 +255,20 @@ DWORD WINAPI recvThrd(LPVOID lpParam)
 			ReleaseSemaphore(hSemRXData, 1, 0);
 		}
 
-		printf("%.*s", ret, smesg);
+		time(&rawtime);
+		timeinfo = localtime(&rawtime);
+		sprintf(timeStr, "%s", asctime(timeinfo));
+		timeStr[strlen(timeStr)-1] = '\0';
+
+		printf("[%s] ", timeStr);
+		printf("%.*s\n", ret, smesg);
 
 		if (fp)
+		{
+			fprintf(fp, "[%s] ", timeStr);
 			fprintf(fp, "%.*s", ret, smesg);
+		}
+	
 	} while (1);
 
 	if (fp)
