@@ -10,6 +10,7 @@ using System.Windows.Forms;
 using System.Net.Sockets;
 using System.Net;
 using System.IO;
+using System.Diagnostics;
 
 namespace client03
 {
@@ -52,6 +53,9 @@ namespace client03
         TcpClient client;
         NetworkStream ns;
         Thread t = null;
+        int waitForSuccess = 0;
+
+        Stopwatch stopWatch = new Stopwatch();
 
 
         public Client()
@@ -188,7 +192,10 @@ namespace client03
 
             myvhData = setVehicleData;
 
-            if(textBoxReceivedData.Text == "Disconnected")
+            if(textBoxReceivedData.Text != "")
+                textBoxLastInputData.Text = textBoxReceivedData.Text;
+
+            if (textBoxReceivedData.Text == "Disconnected")
             {
                 buttonDisconnect_Click(sender, e);
                 return;
@@ -225,10 +232,32 @@ namespace client03
 
                 if (calculateChecksum(recvString) == myvhData.checkSum)
                 {
-                    setVehicleData = myvhData;
-                    UpdateGUI(setVehicleData);
+                    if ((waitForSuccess == 1 && myvhData.newData == 1) || waitForSuccess == 0)
+                    {
+                        waitForSuccess = 0;                             // new data accepted on server side
+                        setVehicleData = myvhData;                      
+                        UpdateGUI(setVehicleData);
+                    }
+                    else
+                    {
+                        UpdateGUI(myvhData);                            // resend command
+                        SendData(setVehicleData);                       // and update gui with the current received data
+                    }
+
+                    stopWatch.Stop();
+                    TimeSpan ts = stopWatch.Elapsed;
+                    if(ts.TotalMilliseconds >120)
+                    {
+                        labelTimeout.Text = "Timeout: " + ts.TotalMilliseconds.ToString() + "ms";
+                    }
+                    else
+                    {
+                        labelTimeout.Text = "";
+                    }
                 }
-            }
+
+                textBoxReceivedData.Text = "";
+            }   
         }
 
 
@@ -312,6 +341,10 @@ namespace client03
 
                 byte[] byteTime = Encoding.ASCII.GetBytes(s);
                 ns.Write(byteTime, 0, byteTime.Length);
+
+                waitForSuccess = 1;
+                stopWatch.Reset();
+                stopWatch.Start();
             }
         }
 

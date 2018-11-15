@@ -54,6 +54,8 @@
             this.textBoxAccel = new System.Windows.Forms.TextBox();
             this.labelActSteer = new System.Windows.Forms.Label();
             this.textBoxReceivedData = new System.Windows.Forms.TextBox();
+            this.textBoxLastInputData = new System.Windows.Forms.TextBox();
+            this.labelTimeout = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarSteering)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarActualSteerPosition)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarAcc)).BeginInit();
@@ -314,17 +316,35 @@
             // 
             // textBoxReceivedData
             // 
-            this.textBoxReceivedData.Location = new System.Drawing.Point(145, 280);
+            this.textBoxReceivedData.Location = new System.Drawing.Point(427, 280);
             this.textBoxReceivedData.Name = "textBoxReceivedData";
-            this.textBoxReceivedData.Size = new System.Drawing.Size(387, 20);
+            this.textBoxReceivedData.Size = new System.Drawing.Size(105, 20);
             this.textBoxReceivedData.TabIndex = 21;
+            this.textBoxReceivedData.Visible = false;
             this.textBoxReceivedData.TextChanged += new System.EventHandler(this.textBoxReceivedData_TextChanged);
+            // 
+            // textBoxLastInputData
+            // 
+            this.textBoxLastInputData.Location = new System.Drawing.Point(187, 279);
+            this.textBoxLastInputData.Name = "textBoxLastInputData";
+            this.textBoxLastInputData.Size = new System.Drawing.Size(225, 20);
+            this.textBoxLastInputData.TabIndex = 22;
+            // 
+            // labelTimeout
+            // 
+            this.labelTimeout.AutoSize = true;
+            this.labelTimeout.Location = new System.Drawing.Point(427, 286);
+            this.labelTimeout.Name = "labelTimeout";
+            this.labelTimeout.Size = new System.Drawing.Size(0, 13);
+            this.labelTimeout.TabIndex = 23;
             // 
             // Client
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(544, 311);
+            this.Controls.Add(this.labelTimeout);
+            this.Controls.Add(this.textBoxLastInputData);
             this.Controls.Add(this.textBoxReceivedData);
             this.Controls.Add(this.labelActSteer);
             this.Controls.Add(this.textBoxAccel);
@@ -390,6 +410,8 @@
         private System.Windows.Forms.TextBox textBoxAccel;
         private System.Windows.Forms.Label labelActSteer;
         private System.Windows.Forms.TextBox textBoxReceivedData;
+        private System.Windows.Forms.TextBox textBoxLastInputData;
+        private System.Windows.Forms.Label labelTimeout;
     }
 }
 

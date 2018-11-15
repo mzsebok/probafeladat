@@ -13,8 +13,9 @@
 #define MAXSPEED_R	30
 #define WHEELSTEPVAL	10
 
-HANDLE hSemRXData;
-HANDLE hSemDisc;
+HANDLE hSemRXData;		// semaphore for received data
+HANDLE hSemDisc;		// semaphore for connected state
+HANDLE hSemClk;			// semaphore for sent time
 
 typedef struct {
 	int   ignition;
@@ -24,9 +25,10 @@ typedef struct {
 	int   setWheelDegree;
 	int   actWheelDegree;
 	int   acceleration;
+	int   lastSuccess;
 }vehicleState;
 
-vehicleState myVehicleState = { 0, 'N', 0, 0, 0, 0 , 0 };		// actual vehicle state
+vehicleState myVehicleState = { 0, 'N', 0, 0, 0, 0 , 0, 0};		// actual vehicle state
 
 typedef struct {
 	int  newData;
@@ -39,10 +41,11 @@ typedef struct {
 	int  checkSum;
 }rxData;
 
-rxData newRxData = {0, 0, 'N', 0, 0, 0, 0, 0 };
+rxData newRxData = {0, 0, 'N', 0, 0, 0, 0, 0 };					// store received data
 //rxData newRxData = {0, 0, 'D', 0, 0, 320, 50, 0 };
 
 char connectedState = 0;
+clock_t sentTime;				// time stamp for the last packet sent
 
 
 int calclChecksum(char *sData)
@@ -88,6 +91,8 @@ void vehicleStateMachine(vehicleState * vHState)
 
 	WaitForSingleObject(hSemRXData, INFINITE);
 
+	vHState->lastSuccess = 0;
+
 	if (newRxData.newData)
 	{
 		vHState->ignition = newRxData.ignition;
@@ -96,6 +101,7 @@ void vehicleStateMachine(vehicleState * vHState)
 		vHState->acceleration = newRxData.acceleration;
 		vHState->setWheelDegree = newRxData.wheelDegree;
 		newRxData.newData = 0;
+		vHState->lastSuccess = 1;
 	}
 
 	ReleaseSemaphore(hSemRXData, 1, 0);
@@ -147,7 +153,7 @@ DWORD WINAPI sendThrd(LPVOID lpParam)
 		{
 			vehicleStateMachine(&myVehicleState);
 
-			sendData.newData = 1;			// success indicator
+			sendData.newData = myVehicleState.lastSuccess;			// success indicator
 			sendData.ignition = myVehicleState.ignition;
 			sendData.gear = myVehicleState.gear;
 			sendData.turnSignal = myVehicleState.turnSignal;
@@ -216,6 +222,10 @@ DWORD WINAPI sendThrd(LPVOID lpParam)
 		if (!connected)
 			break;
 
+		WaitForSingleObject(hSemClk, INFINITE);
+		sentTime = clock();
+		ReleaseSemaphore(hSemClk, 1, 0);
+
 	} while (1);
 
 	shutdown(sock, SD_SEND);
@@ -231,6 +241,7 @@ DWORD WINAPI recvThrd(LPVOID lpParam)
 	rxData recvData;
 	time_t rawtime;
 	struct tm * timeinfo;
+	int timeoutVal;
 
 
 	FILE *fp = fopen("fout.txt", "w+");
@@ -253,6 +264,14 @@ DWORD WINAPI recvThrd(LPVOID lpParam)
 			memcpy(&newRxData, &recvData, sizeof(rxData));
 			newRxData.newData = 1;
 			ReleaseSemaphore(hSemRXData, 1, 0);
+
+			WaitForSingleObject(hSemClk, INFINITE);			// detect if packet received in time
+			timeoutVal = (clock() - sentTime) * 1000 / CLOCKS_PER_SEC;
+			if (timeoutVal > 1)	// > 100ms
+			{
+				printf("Packet timeout: %dms\n", timeoutVal);
+			}
+			ReleaseSemaphore(hSemClk, 1, 0);
 		}
 
 		time(&rawtime);
